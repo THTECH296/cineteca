@@ -39,8 +39,27 @@ function AdminLogin({ signIn }: { signIn: (e: string, p: string) => Promise<{ er
 }
 
 export default function AdminApp() {
-  const { user, loading, signIn, signOut } = useAuth();
+  const { user, loading, configured, signIn, signOut } = useAuth();
   const [tab, setTab] = useState<'painel' | 'filmes'>('painel');
+
+  // sem backend o painel não tem o que administrar — explica em vez de falhar no login
+  if (!configured) {
+    return (
+      <div className="adm-login">
+        <div className="adm-login__card">
+          <span className="adm-badge">PAINEL ADMINISTRATIVO</span>
+          <div className="pix-expired__ic">🔌</div>
+          <h1 className="adm-login__title">Painel indisponível na demonstração</h1>
+          <p className="adm-login__sub">
+            O painel administrativo (cadastro de filmes, upload de pôster e vendas em tempo real)
+            depende do banco de dados. Nesta versão pública o site roda em modo demonstração,
+            com dados locais. O código do painel está no repositório, em <b>src/admin/</b>.
+          </p>
+          <a className="adm-back" href="./">← Voltar ao site</a>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) return <div className="adm-load">Carregando…</div>;
   if (!user) return <AdminLogin signIn={signIn} />;

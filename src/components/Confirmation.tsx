@@ -19,7 +19,9 @@ export default function Confirmation({ selection, onNew }: Props) {
   const { movie, date, weekday, time, seats } = selection;
   const total = totalAssentos(seats, movie.price);
   const meias = seats.filter((s) => s.type === 'meia').length;
-  const code = (movie.id.slice(0, 3) + date.replace(/-/g, '') + time.replace(':', '')).toUpperCase().slice(0, 12);
+  // sem o prefixo 'demo-' o código varia por filme também no modo demonstração
+  const slug = movie.id.replace(/^demo-/, '');
+  const code = (slug.slice(0, 3) + date.replace(/-/g, '') + time.replace(':', '')).toUpperCase().slice(0, 12);
 
   const downloadPdf = async () => {
     const W = 340;

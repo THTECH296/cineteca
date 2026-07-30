@@ -16,10 +16,11 @@ const AuthCtx = createContext<AuthValue | null>(null);
 
 function translate(msg: string): string {
   const m = msg.toLowerCase();
-  if (m.includes('invalid login')) return 'E-mail ou senha incorretos.';
-  if (m.includes('already registered') || m.includes('already been registered')) return 'Este e-mail já possui conta. Faça login.';
+  if (m.includes('invalid login') || m.includes('invalid credentials')) return 'E-mail ou senha incorretos.';
+  if (m.includes('already registered') || m.includes('already been registered') || m.includes('user already')) return 'Este e-mail já possui conta. Faça login.';
+  if (m.includes('rate limit') || m.includes('over_email')) return 'Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente de novo.';
   if (m.includes('password')) return 'A senha precisa de no mínimo 6 caracteres.';
-  if (m.includes('email')) return 'Informe um e-mail válido.';
+  if (m.includes('invalid') && m.includes('email')) return 'Informe um e-mail válido.';
   return msg;
 }
 
@@ -34,10 +35,11 @@ export function AuthProvider({ children, client }: { children: ReactNode; client
       setLoading(false);
       return;
     }
-    client.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
-      setLoading(false);
-    });
+    client.auth
+      .getSession()
+      .then(({ data }) => setUser(data.session?.user ?? null))
+      .catch(() => setUser(null)) // backend fora do ar: segue sem sessão em vez de travar
+      .finally(() => setLoading(false));
     const { data: sub } = client.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });

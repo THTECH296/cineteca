@@ -4,10 +4,12 @@ import Poster from './Poster';
 
 interface Props {
   movies: Movie[];
+  /** Cartaz local (Supabase fora do ar): compra e login ficam indisponíveis. */
+  demo?: boolean;
   onPick: (movie: Movie) => void;
 }
 
-export default function Cartaz({ movies, onPick }: Props) {
+export default function Cartaz({ movies, demo = false, onPick }: Props) {
   const [query, setQuery] = useState('');
   const searching = query.trim().length > 0;
 
@@ -45,7 +47,10 @@ export default function Cartaz({ movies, onPick }: Props) {
 
       <div className="cartaz__head">
         <div>
-          <p className="kicker">{searching ? 'Resultados' : 'Em cartaz · hoje'}</p>
+          <p className="kicker">
+            {searching ? 'Resultados' : 'Em cartaz · hoje'}
+            {demo && !searching && <span className="demo-pill" title="O banco de dados não respondeu — exibindo o cartaz local.">Modo demonstração</span>}
+          </p>
           <h2 className="sec display">{searching ? `“${query}”` : 'Todos os filmes'}</h2>
         </div>
         <input

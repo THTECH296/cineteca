@@ -21,15 +21,19 @@ interface SessionPick {
 export default function App() {
   const { user, loading } = useAuth();
   const [movies, setMovies] = useState<Movie[]>([]);
+  const [demoCatalog, setDemoCatalog] = useState(false);
   const [step, setStep] = useState<Step>('cartaz');
   const [movie, setMovie] = useState<Movie | null>(null);
   const [session, setSession] = useState<SessionPick | null>(null);
   const [seats, setSeats] = useState<SeatChoice[]>([]);
   const [selection, setSelection] = useState<Selection | null>(null);
 
-  // carrega o cartaz do banco
+  // carrega o cartaz do banco (com fallback no catálogo local)
   useEffect(() => {
-    fetchMovies().then(setMovies);
+    fetchMovies().then(({ movies: list, source }) => {
+      setMovies(list);
+      setDemoCatalog(source === 'demo');
+    });
   }, []);
 
   // grava o pedido e vai pro ingresso
@@ -91,7 +95,7 @@ export default function App() {
       <Header step={step} onHome={reset} />
       <div className="app">
         <main className="main" key={step}>
-          {step === 'cartaz' && <Cartaz movies={movies} onPick={(m) => { setMovie(m); setStep('sessao'); }} />}
+          {step === 'cartaz' && <Cartaz movies={movies} demo={demoCatalog} onPick={(m) => { setMovie(m); setStep('sessao'); }} />}
 
           {step === 'sessao' && movie && (
             <SessionView
@@ -99,7 +103,8 @@ export default function App() {
               onBack={() => setStep('cartaz')}
               onConfirm={(date, weekday, time) => {
                 setSession({ date, weekday, time });
-                setStep(user ? 'assentos' : 'auth');
+                // no modo demonstração não há backend de auth — segue direto pros lugares
+                setStep(user || demoCatalog ? 'assentos' : 'auth');
               }}
             />
           )}

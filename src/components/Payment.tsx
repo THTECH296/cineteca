@@ -3,6 +3,7 @@ import type { Movie, SeatChoice } from '../types';
 import { totalAssentos } from '../types';
 import { formatBRDate } from '../data/movies';
 import { supabase } from '../lib/supabase';
+import { createDemoPix, isDemoMode } from '../lib/demo';
 import Poster from './Poster';
 
 interface Props {
@@ -36,7 +37,17 @@ export default function Payment({ movie, date, weekday, time, seats, onBack, onP
   const [copied, setCopied] = useState(false);
   const [simulating, setSimulating] = useState(false);
 
+  const demo = isDemoMode();
+
   const createPix = useCallback(async () => {
+    if (demo) {
+      setPixLoading(true);
+      setPixError('');
+      const charge = await createDemoPix(total, Date.now());
+      setPix(charge);
+      setPixLoading(false);
+      return;
+    }
     if (!supabase) {
       setPixError('Supabase não configurado.');
       return;
@@ -52,7 +63,7 @@ export default function Payment({ movie, date, weekday, time, seats, onBack, onP
       return;
     }
     setPix(data as PixCharge);
-  }, [total, movie.title]);
+  }, [demo, total, movie.title]);
 
   useEffect(() => {
     if (tab === 'pix' && !pix && !pixLoading && !pixError) createPix();
@@ -70,7 +81,8 @@ export default function Payment({ movie, date, weekday, time, seats, onBack, onP
   const expired = !!pix && secsLeft === 0;
 
   useEffect(() => {
-    if (!pix || tab !== 'pix' || expired) return;
+    // no modo demonstração não há webhook para consultar
+    if (!pix || tab !== 'pix' || expired || demo) return;
     let stop = false;
     const id = setInterval(async () => {
       const { data } = await supabase!.functions.invoke('pix', { body: { action: 'check', id: pix.id } });
@@ -83,7 +95,7 @@ export default function Payment({ movie, date, weekday, time, seats, onBack, onP
       stop = true;
       clearInterval(id);
     };
-  }, [pix, tab, expired, onPaid]);
+  }, [pix, tab, expired, demo, onPaid]);
 
   const copyPix = async () => {
     if (!pix) return;
@@ -97,7 +109,14 @@ export default function Payment({ movie, date, weekday, time, seats, onBack, onP
   };
 
   const simulatePayment = async () => {
-    if (!pix || !supabase) return;
+    if (!pix) return;
+    if (demo) {
+      setSimulating(true);
+      // pequena espera só para a confirmação não parecer instantânea demais
+      setTimeout(() => { setSimulating(false); onPaid(); }, 900);
+      return;
+    }
+    if (!supabase) return;
     setSimulating(true);
     await supabase.functions.invoke('pix', { body: { action: 'simulate', id: pix.id } });
     const { data } = await supabase.functions.invoke('pix', { body: { action: 'check', id: pix.id } });
@@ -117,6 +136,13 @@ export default function Payment({ movie, date, weekday, time, seats, onBack, onP
   const [cardError, setCardError] = useState('');
 
   const payCardHosted = async () => {
+    if (demo) {
+      setCardError('');
+      setCardLoading(true);
+      // simula o retorno do checkout hospedado
+      setTimeout(() => { setCardLoading(false); onPaid(); }, 1400);
+      return;
+    }
     if (!supabase) return;
     setCardError('');
     setCardLoading(true);
@@ -181,9 +207,11 @@ export default function Payment({ movie, date, weekday, time, seats, onBack, onP
               </div>
             ) : (
               <div className="pix">
-                <span className="pix__badge">🧪 Cobrança de teste · modo dev</span>
+                <span className="pix__badge">{demo ? '🎬 Cobrança simulada · modo demonstração' : '🧪 Cobrança de teste · modo dev'}</span>
                 <p className="pix__hint">
-                  QR Code e código gerados de verdade pela AbacatePay. Expira em{' '}
+                  {demo
+                    ? 'BR Code no formato oficial do Banco Central, com chave fictícia — nenhum banco consegue pagá-lo. Expira em '
+                    : 'QR Code e código gerados de verdade pela AbacatePay. Expira em '}
                   <b className={secsLeft <= 60 ? 'pix__timer is-low' : 'pix__timer'}>{mmss}</b>
                 </p>
                 <div className="pix__qrwrap">
@@ -193,9 +221,13 @@ export default function Payment({ movie, date, weekday, time, seats, onBack, onP
                 <button className="primary" onClick={copyPix}>{copied ? '✓ Código copiado!' : 'Copiar código PIX'}</button>
                 <div className="pix__waiting"><span className="pix__dot" /> Aguardando confirmação do pagamento…</div>
                 <button className="btn-sim" onClick={simulatePayment} disabled={simulating}>
-                  {simulating ? 'Confirmando…' : '✓ Simular pagamento (modo teste)'}
+                  {simulating ? 'Confirmando…' : demo ? '✓ Simular pagamento e ver o ingresso' : '✓ Simular pagamento (modo teste)'}
                 </button>
-                <p className="pix__note">No modo dev o QR não é pago por bancos reais — use “Simular pagamento” para concluir. Em produção, é pago no app do banco e confirmado por webhook.</p>
+                <p className="pix__note">
+                  {demo
+                    ? 'Demonstração: use “Simular pagamento” para concluir e receber o ingresso. Em produção a cobrança é gerada pela AbacatePay, paga no app do banco e confirmada por webhook.'
+                    : 'No modo dev o QR não é pago por bancos reais — use “Simular pagamento” para concluir. Em produção, é pago no app do banco e confirmado por webhook.'}
+                </p>
               </div>
             )
           ) : (
@@ -203,14 +235,23 @@ export default function Payment({ movie, date, weekday, time, seats, onBack, onP
               <div className="hosted__ic">🔒</div>
               <h3 className="hosted__title">Pagamento seguro com cartão</h3>
               <p className="hosted__txt">
-                Você será levado ao ambiente seguro do <b>AbacatePay</b> para inserir os dados do cartão.
-                Por segurança (PCI), eles não passam pelo nosso site.
+                {demo ? (
+                  <>Em produção você seria levado ao ambiente seguro do <b>AbacatePay</b> para inserir os dados do cartão — por
+                  exigência de PCI, eles nunca passam pelo nosso site. Aqui o retorno do checkout é simulado.</>
+                ) : (
+                  <>Você será levado ao ambiente seguro do <b>AbacatePay</b> para inserir os dados do cartão.
+                  Por segurança (PCI), eles não passam pelo nosso site.</>
+                )}
               </p>
               {cardError && <p className="cardf__error">⚠ {cardError}</p>}
               <button className="primary" onClick={payCardHosted} disabled={cardLoading}>
-                {cardLoading ? 'Redirecionando…' : `Pagar R$ ${total},00 no cartão →`}
+                {cardLoading ? (demo ? 'Aprovando…' : 'Redirecionando…') : demo ? `Simular pagamento de R$ ${total},00 →` : `Pagar R$ ${total},00 no cartão →`}
               </button>
-              <p className="pix__note">Checkout hospedado AbacatePay · ambiente de teste. Após pagar, você volta automaticamente e o ingresso é liberado.</p>
+              <p className="pix__note">
+                {demo
+                  ? 'Demonstração: nenhum dado de cartão é pedido nem cobrado.'
+                  : 'Checkout hospedado AbacatePay · ambiente de teste. Após pagar, você volta automaticamente e o ingresso é liberado.'}
+              </p>
             </div>
           )}
         </div>
