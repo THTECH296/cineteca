@@ -2,12 +2,14 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <!-- viewport-fit=cover: sem isto, no iOS o layout para na área segura e a
-         faixa da barra de status fica sendo pintada pelo CONTEÚDO da página —
-         o header fixo aparecia com o pôster passando por cima dele. Com cover,
-         o topo real da janela é o topo da tela, e o header usa
-         env(safe-area-inset-top) para não ficar embaixo do relógio. -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- SEM viewport-fit=cover. Ele entrou quando havia uma barra fixa no topo
+         que precisava cobrir a faixa do relógio. Essa barra não existe mais (o
+         celular usa a barra de abas no rodapé), e com cover o layout passa a
+         invadir as faixas do sistema: o título ficava embaixo do relógio e,
+         embaixo, o pôster aparecia na faixa do indicador de home. Sem cover o
+         layout fica dentro da área segura e o sistema pinta essas faixas com o
+         fundo da página. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0b0b10" />
     <link rel="icon" type="image/svg+xml" href="/cineteca/favicon.svg" />
     <title>CineTeca — Teófilo Otoni · Comprar ingressos</title>
@@ -15,8 +17,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <script type="module" crossorigin src="/cineteca/assets/index-BEHW-hG2.js"></script>
-    <link rel="stylesheet" crossorigin href="/cineteca/assets/index-DX7kSiMQ.css">
+    <script type="module" crossorigin src="/cineteca/assets/index-VjtdtIX_.js"></script>
+    <link rel="stylesheet" crossorigin href="/cineteca/assets/index-DBbKVSJH.css">
   </head>
   <body>
     <div id="root"></div>
